@@ -1,0 +1,86 @@
+```rmd
+---
+title: "Machine Learning Project: Barbell Lifting"
+author: "Khoirotun Hisan"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+# 1. Pendahuluan
+Dalam proyek ini, tujuan kita adalah memprediksi cara seseorang melakukan latihan angkat barbel menggunakan data dari akselerometer yang dipasang di beberapa bagian tubuh. Dataset yang digunakan berasal dari Groupware les PUC-Rio.
+
+---
+
+# 2. Import Data & Data Preprocessing
+```{r, message=FALSE, warning=FALSE}
+# Load library
+library(caret)
+library(randomForest)
+
+# Baca dataset
+training_data <- read.csv("pml-training.csv", na.strings = c("", "NA"))
+testing_data <- read.csv("pml-testing.csv", na.strings = c("", "NA"))
+
+# Hapus kolom dengan banyak missing values
+training_data <- training_data[, colSums(is.na(training_data)) == 0]
+
+# Hapus kolom yang tidak relevan (ID dan timestamp)
+training_data <- training_data[, -c(1:7)]
+
+# Konversi variabel target menjadi faktor
+training_data$classe <- as.factor(training_data$classe)
+
+# Pastikan kolom testing_data sesuai dengan trainSet
+testing_data <- testing_data[, colnames(testing_data) %in% colnames(training_data)]
+```
+
+---
+
+# 3. Pembangunan Model
+```{r, message=FALSE, warning=FALSE}
+set.seed(1234)
+
+# Split data menjadi training dan validation (70% - 30%)
+trainIndex <- createDataPartition(training_data$classe, p = 0.7, list = FALSE)
+trainSet <- training_data[trainIndex, ]
+validSet <- training_data[-trainIndex, ]
+
+# Train model menggunakan Random Forest
+model_rf <- train(
+    classe ~ ., 
+    data = trainSet, 
+    method = "rf", 
+    trControl = trainControl(method = "cv", number = 5) # Cross-validation 5-fold
+)
+```
+
+---
+
+# 4. Evaluasi Model
+```{r, message=FALSE, warning=FALSE}
+# Prediksi pada validation set
+pred_valid <- predict(model_rf, validSet)
+
+# Confusion Matrix
+conf_matrix <- confusionMatrix(pred_valid, validSet$classe)
+print(conf_matrix)
+```
+
+---
+
+# 5. Prediksi pada Data Uji
+```{r, message=FALSE, warning=FALSE}
+# Prediksi pada testing set
+pred_test <- predict(model_rf, testing_data)
+
+# Menampilkan hasil prediksi
+pred_test
+```
+
+---
+
+# 6. Kesimpulan
+Dari hasil model yang telah kita bangun, kita dapat melihat bahwa **Random Forest memberikan performa yang cukup baik** dalam memprediksi kategori `classe`. Dengan validasi silang, kita memastikan bahwa model kita tidak overfitting.  
+
+Prediksi yang dihasilkan dapat digunakan untuk menentukan apakah seseorang melakukan angkat beban dengan benar atau tidak.
+```
